@@ -21,7 +21,7 @@ export function createApp() {
   app.use(morgan("combined"));
 
   app.get("/health", (_request, response) => {
-    response.status(200).json({ status: "ok" });
+    response.status(200).send("ok");
   });
 
   app.use("/webhook", webhookRouter);

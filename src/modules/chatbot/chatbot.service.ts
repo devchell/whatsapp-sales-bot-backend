@@ -29,7 +29,7 @@ export class ChatbotService {
     private readonly leadService = new LeadService()
   ) {}
 
-  async processIncomingMessage(input: InboundMessageInput): Promise<ChatbotResponse> {
+  async processMessage(input: InboundMessageInput): Promise<ChatbotResponse> {
     const phone = normalizePhone(input.phone);
     const message = sanitizeText(input.message);
 
@@ -92,6 +92,10 @@ export class ChatbotService {
       clientId: client.id,
       conversationId: conversation.id
     };
+  }
+
+  async processIncomingMessage(input: InboundMessageInput): Promise<ChatbotResponse> {
+    return this.processMessage(input);
   }
 
   private resolveInterest(message: string): LeadInterest {

@@ -1,6 +1,6 @@
 # WhatsApp Sales Bot Backend
 
-Backend modular em Node.js + TypeScript para atendimento, qualificacao de leads e vendas automatizadas via WhatsApp, com webhook compativel com Z-API, fluxo conversacional baseado em estados e persistencia em PostgreSQL via Prisma.
+Backend em Node.js + TypeScript para atendimento, qualificacao de leads e vendas automatizadas via WhatsApp, com Prisma, PostgreSQL, flow-engine stateful e integracao real com Evolution API.
 
 ## Stack
 
@@ -10,14 +10,16 @@ Backend modular em Node.js + TypeScript para atendimento, qualificacao de leads 
 - PostgreSQL
 - Prisma ORM
 - Zod
+- Evolution API
 
 ## Arquitetura
 
-- `controller`: recebe requests HTTP e traduz payloads externos
+- `controller`: recebe webhook e traduz payloads externos
 - `service`: executa regras de negocio e integracoes
-- `repository/data access`: centralizado via Prisma client e servicos de estado
-- `flow-engine`: state machine reutilizavel para conversas
-- `intent-detector`: deteccao inicial de intencao pronta para evolucao com IA
+- `database`: Prisma Client e schema PostgreSQL
+- `flow-engine`: motor conversacional baseado em estados
+- `state-manager`: persistencia do estado por conversa
+- `intent-detector`: classificacao inicial de interesse
 
 ## Estrutura
 
@@ -42,8 +44,8 @@ src/
     lead/
       lead.service.ts
     whatsapp/
+      evolution.service.ts
       whatsapp.controller.ts
-      whatsapp.service.ts
   routes/
     webhook.routes.ts
   utils/
@@ -51,134 +53,211 @@ src/
     logger.ts
     message.ts
     phone.ts
-scripts/
-  simulate-webhook.ts
-```
-
-## Como instalar
-
-```bash
-pnpm install
-cp .env.example .env
 ```
 
 ## Variaveis de ambiente
+
+Crie um `.env` com:
 
 ```env
 NODE_ENV=development
 PORT=3000
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/wpp_sales_bot?schema=public
-ZAPI_BASE_URL=https://api.z-api.io
-ZAPI_INSTANCE_ID=your-instance-id
-ZAPI_INSTANCE_TOKEN=your-instance-token
-ZAPI_CLIENT_TOKEN=your-client-token
+EVOLUTION_API_URL=https://evolution-app.onrender.com
+EVOLUTION_INSTANCE=your-instance-name
+EVOLUTION_API_KEY=your-evolution-api-key
 DEFAULT_COUNTRY_CODE=55
-WHATSAPP_SEND_ENABLED=false
 ```
 
-## Banco de dados
-
-1. Suba um PostgreSQL local ou remoto.
-2. Configure `DATABASE_URL`.
-3. Gere o Prisma Client:
+## Como rodar localmente
 
 ```bash
-pnpm prisma:generate
+npm install
+npm run prisma:push
+npm run dev
 ```
 
-4. Aplique o schema:
+O `postinstall` gera o Prisma Client automaticamente.
 
-```bash
-pnpm prisma:push
+## Health Check
+
+```http
+GET /health
 ```
 
-Para ambiente real, prefira `pnpm prisma:migrate:dev` no desenvolvimento e migracoes versionadas no pipeline.
+Resposta:
 
-## Como rodar
-
-```bash
-pnpm dev
+```text
+ok
 ```
 
-Healthcheck:
+## Webhook do WhatsApp
 
-```bash
-GET http://localhost:3000/health
+Endpoint:
+
+```http
+POST /webhook/whatsapp
 ```
 
-Webhook:
+O backend aceita payload de entrada da Evolution API e processa:
 
-```bash
-POST http://localhost:3000/webhook/whatsapp
+1. extracao do telefone
+2. extracao da mensagem recebida
+3. chamada do `chatbot.service`
+4. resolucao do flow-engine
+5. envio da resposta pela Evolution API
+
+## Evolution API
+
+O envio de mensagem usa:
+
+```http
+POST /message/sendText/{instance}
+```
+
+Headers:
+
+```text
+apikey: YOUR_API_KEY
 Content-Type: application/json
+```
 
+Payload enviado pelo backend:
+
+```json
 {
-  "phone": "5511999999999",
-  "text": "1"
+  "number": "5511999999999",
+  "textMessage": {
+    "text": "mensagem"
+  }
 }
 ```
 
-## Fluxo do bot
+## DEPLOY COMPLETO NO RENDER
 
-Estados suportados:
+### 1. Subir repositorio no GitHub
 
-- `START`
-- `MENU`
-- `LANDING_PAGE`
-- `AUTOMACAO`
-- `SISTEMA`
-- `IA`
-- `QUALIFICACAO`
-- `FINAL`
+Envie a branch `main` para o GitHub.
 
-Fluxo:
+### 2. Conectar ao Render
 
-1. Identifica o usuario pelo telefone.
-2. Busca ou cria o cliente.
-3. Recupera a conversa e o estado atual.
-4. Registra a mensagem recebida.
-5. Resolve a intencao ou avanca a qualificacao.
-6. Salva novo estado, mensagens e dados do lead.
-7. Responde via servico de WhatsApp.
+No painel do Render:
 
-## Teste com ngrok
+1. clique em `New +`
+2. escolha `Web Service`
+3. conecte o repositorio GitHub
+4. selecione este projeto
 
-Exemplo:
+### 3. Criar o Web Service do backend
+
+Configure:
+
+- Runtime: `Node`
+- Build command: `npm install && npm run build`
+- Start command: `npm run start`
+
+### 4. Adicionar variaveis de ambiente
+
+No serviço do backend, configure:
+
+- `NODE_ENV=production`
+- `PORT=10000`
+- `DATABASE_URL=...`
+- `EVOLUTION_API_URL=https://evolution-app.onrender.com`
+- `EVOLUTION_INSTANCE=your-instance-name`
+- `EVOLUTION_API_KEY=your-evolution-api-key`
+- `DEFAULT_COUNTRY_CODE=55`
+
+### 5. Prisma no Render
+
+Depois do primeiro deploy, rode no Shell do Render ou em job manual:
 
 ```bash
-ngrok http 3000
+npm run prisma:push
 ```
 
-Depois configure a URL publica no provedor WhatsApp:
+Neste projeto, a estrategia escolhida para simplificar o free tier e `prisma db push`.
+
+## EVOLUTION API NO RENDER
+
+Crie um segundo serviço no Render para a Evolution API:
+
+1. clique em `New +`
+2. escolha `Web Service`
+3. selecione `Deploy an existing image from a registry`
+4. informe a imagem Docker: `evolutionapi/evolution-api`
+
+Configure as variaveis minimas:
+
+- `PORT=8080`
+- `AUTHENTICATION_API_KEY=yourkey`
+
+Depois do deploy, voce tera uma URL publica, por exemplo:
+
+```env
+EVOLUTION_API_URL=https://evolution-app.onrender.com
+```
+
+## WEBHOOK
+
+Na Evolution API, configure o webhook da instancia apontando para:
 
 ```text
-https://SEU-ENDPOINT.ngrok-free.app/webhook/whatsapp
+https://seu-backend.onrender.com/webhook/whatsapp
 ```
 
-## Simular mensagens
+Para eventos por instancia, habilite pelo menos:
 
-Com servidor rodando:
+- `MESSAGES_UPSERT`
 
-```bash
-pnpm test:webhook -- "1"
-pnpm test:webhook -- "quero automacao"
-pnpm test:webhook -- "atendo 40 clientes por dia"
+## CONECTAR WHATSAPP
+
+1. acesse a interface ou endpoints da Evolution API
+2. gere o QR code da instancia
+3. escaneie com o WhatsApp
+4. confirme o status da conexao
+
+## Integracao entre servicos
+
+Exemplo de configuracao final:
+
+```env
+DATABASE_URL=postgresql://...
+EVOLUTION_API_URL=https://evolution-app.onrender.com
+EVOLUTION_INSTANCE=meu-bot
+EVOLUTION_API_KEY=super-secret-key
+PORT=10000
 ```
 
-## Seguranca aplicada
+Fluxo em producao:
 
-- Validacao de entrada com Zod
-- Normalizacao de telefone e texto
-- `helmet` para headers de seguranca
-- Corpo de request limitado
-- Sem log de payload sensivel completo
-- Servico de envio desacoplado para mock e futura autenticacao mais restritiva
+1. WhatsApp entrega a mensagem para a Evolution API
+2. Evolution API envia webhook para o backend no Render
+3. Backend processa a conversa com o flow-engine
+4. Backend responde usando `EvolutionService`
+5. Evolution API entrega a resposta ao usuario final
 
-## Evolucoes recomendadas
+## Scripts
 
-- Autenticacao do webhook por assinatura
-- Multi-tenant por empresa/conta
-- RBAC para painel administrativo
-- Filas para envio e retry
-- IA para classificacao semantica e recomendacao comercial
-- Observabilidade com OpenTelemetry
+```json
+{
+  "build": "tsc",
+  "start": "node dist/server.js",
+  "dev": "ts-node-dev --respawn --transpile-only src/server.ts"
+}
+```
+
+## Observacoes operacionais
+
+- O servidor usa `process.env.PORT || 3000`
+- O Prisma Client e gerado em `postinstall`
+- O backend nao depende de Docker local
+- O flow-engine existente foi preservado
+- A integracao antiga com mock foi removida
+
+## Proximos endurecimentos recomendados
+
+- validar assinatura/origem do webhook
+- adicionar filas para retry de envio
+- aplicar multi-tenant com isolamento real por conta
+- adicionar observabilidade e alertas

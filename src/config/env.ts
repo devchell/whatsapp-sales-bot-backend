@@ -7,15 +7,10 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().positive().default(3000),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
-  ZAPI_BASE_URL: z.string().url(),
-  ZAPI_INSTANCE_ID: z.string().min(1),
-  ZAPI_INSTANCE_TOKEN: z.string().min(1),
-  ZAPI_CLIENT_TOKEN: z.string().min(1),
-  DEFAULT_COUNTRY_CODE: z.string().regex(/^\d{1,4}$/).default("55"),
-  WHATSAPP_SEND_ENABLED: z
-    .string()
-    .transform((value) => value === "true")
-    .default("false")
+  EVOLUTION_API_URL: z.string().url(),
+  EVOLUTION_INSTANCE: z.string().min(1, "EVOLUTION_INSTANCE is required"),
+  EVOLUTION_API_KEY: z.string().min(1, "EVOLUTION_API_KEY is required"),
+  DEFAULT_COUNTRY_CODE: z.string().regex(/^\d{1,4}$/).default("55")
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

@@ -5,11 +5,12 @@ import { logger } from "./utils/logger";
 
 async function bootstrap() {
   const app = createApp();
+  const port = Number(process.env.PORT || env.PORT || 3000);
 
   await prisma.$connect();
 
-  app.listen(env.PORT, () => {
-    logger.info(`Server running on port ${env.PORT}`);
+  app.listen(port, () => {
+    logger.info(`Server running on port ${port}`);
   });
 }
 
