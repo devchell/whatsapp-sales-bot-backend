@@ -67,6 +67,8 @@ EVOLUTION_API_URL=https://evolution-app.onrender.com
 EVOLUTION_INSTANCE=your-instance-name
 EVOLUTION_API_KEY=your-evolution-api-key
 DEFAULT_COUNTRY_CODE=55
+WEBHOOK_SECRET=your-shared-secret
+EVOLUTION_REQUEST_TIMEOUT_MS=15000
 ```
 
 ## Como rodar localmente
@@ -106,6 +108,8 @@ O backend aceita payload de entrada da Evolution API e processa:
 3. chamada do `chatbot.service`
 4. resolucao do flow-engine
 5. envio da resposta pela Evolution API
+
+Se `WEBHOOK_SECRET` estiver configurado, envie o segredo em `x-webhook-secret`, `apikey` ou `?secret=...`.
 
 ## Evolution API
 
@@ -156,6 +160,8 @@ Configure:
 - Build command: `npm install && npm run build`
 - Start command: `npm run start`
 
+Opcionalmente, use o [render.yaml](/D:/Sistemas/projetos/portifolio/devchell_bot/render.yaml) deste repositorio via Blueprint.
+
 ### 4. Adicionar variaveis de ambiente
 
 No serviço do backend, configure:
@@ -167,6 +173,8 @@ No serviço do backend, configure:
 - `EVOLUTION_INSTANCE=your-instance-name`
 - `EVOLUTION_API_KEY=your-evolution-api-key`
 - `DEFAULT_COUNTRY_CODE=55`
+- `WEBHOOK_SECRET=your-shared-secret`
+- `EVOLUTION_REQUEST_TIMEOUT_MS=15000`
 
 ### 5. Prisma no Render
 
@@ -204,6 +212,12 @@ Na Evolution API, configure o webhook da instancia apontando para:
 
 ```text
 https://seu-backend.onrender.com/webhook/whatsapp
+```
+
+Se ativar segredo compartilhado:
+
+```text
+https://seu-backend.onrender.com/webhook/whatsapp?secret=SEU_SEGREDO
 ```
 
 Para eventos por instancia, habilite pelo menos:
@@ -254,6 +268,8 @@ Fluxo em producao:
 - O backend nao depende de Docker local
 - O flow-engine existente foi preservado
 - A integracao antiga com mock foi removida
+- Mensagens de grupo e eventos `fromMe` sao ignorados
+- O envio para Evolution usa timeout configuravel
 
 ## Proximos endurecimentos recomendados
 

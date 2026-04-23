@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from "express";
 import { z } from "zod";
 
 import { ChatbotService } from "../chatbot/chatbot.service";
+import { AppError } from "../../utils/http-errors";
+import { isValidWebhookSecret } from "../../utils/webhook";
 import { EvolutionService } from "./evolution.service";
 
 const webhookPayloadSchema = z
@@ -56,14 +58,19 @@ export class WhatsappController {
   handleWebhook = async (request: Request, response: Response, next: NextFunction) => {
     try {
       const payload = webhookPayloadSchema.parse(request.body);
+      if (!isValidWebhookSecret(request)) {
+        throw new AppError(401, "Invalid webhook secret");
+      }
+
       const source = payload.data ?? payload;
       const remoteJid = source.key?.remoteJid;
       const phone = remoteJid?.replace(/\D/g, "");
       const message =
         source.message?.conversation ?? source.message?.extendedTextMessage?.text;
       const fromMe = source.key?.fromMe ?? false;
+      const isGroupMessage = remoteJid?.includes("@g.us") ?? false;
 
-      if (fromMe || !phone || !message) {
+      if (fromMe || isGroupMessage || !phone || !message) {
         response.status(202).json({
           status: "ignored",
           reason: "unsupported_or_outbound_event"

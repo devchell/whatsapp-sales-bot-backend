@@ -10,7 +10,9 @@ const envSchema = z.object({
   EVOLUTION_API_URL: z.string().url(),
   EVOLUTION_INSTANCE: z.string().min(1, "EVOLUTION_INSTANCE is required"),
   EVOLUTION_API_KEY: z.string().min(1, "EVOLUTION_API_KEY is required"),
-  DEFAULT_COUNTRY_CODE: z.string().regex(/^\d{1,4}$/).default("55")
+  DEFAULT_COUNTRY_CODE: z.string().regex(/^\d{1,4}$/).default("55"),
+  WEBHOOK_SECRET: z.string().min(1).optional(),
+  EVOLUTION_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(15000)
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

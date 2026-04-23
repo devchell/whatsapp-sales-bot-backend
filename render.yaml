@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: whatsapp-sales-bot-backend
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      - key: DEFAULT_COUNTRY_CODE
+        value: "55"
+      - key: EVOLUTION_REQUEST_TIMEOUT_MS
+        value: "15000"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: whatsapp-sales-bot-db
+          property: connectionString
+      - key: EVOLUTION_API_URL
+        sync: false
+      - key: EVOLUTION_INSTANCE
+        sync: false
+      - key: EVOLUTION_API_KEY
+        sync: false
+      - key: WEBHOOK_SECRET
+        sync: false
+
+databases:
+  - name: whatsapp-sales-bot-db
+    plan: free
+    region: oregon
+    postgresMajorVersion: "17"

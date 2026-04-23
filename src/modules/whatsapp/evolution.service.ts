@@ -15,30 +15,43 @@ export class EvolutionService {
 
   async sendMessage(input: SendEvolutionMessageInput) {
     const payload = sendMessageSchema.parse(input);
+    const abortController = new AbortController();
+    const timeout = setTimeout(() => abortController.abort(), env.EVOLUTION_REQUEST_TIMEOUT_MS);
 
-    const response = await fetch(this.endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: env.EVOLUTION_API_KEY
-      },
-      body: JSON.stringify({
-        number: payload.number,
-        textMessage: {
-          text: payload.text
-        }
-      })
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-
-      throw new AppError(502, "Failed to send message via Evolution API", {
-        status: response.status,
-        body: errorBody
+    try {
+      const response = await fetch(this.endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: env.EVOLUTION_API_KEY
+        },
+        body: JSON.stringify({
+          number: payload.number,
+          textMessage: {
+            text: payload.text
+          }
+        }),
+        signal: abortController.signal
       });
-    }
 
-    return response.json();
+      if (!response.ok) {
+        const errorBody = await response.text();
+
+        throw new AppError(502, "Failed to send message via Evolution API", {
+          status: response.status,
+          body: errorBody
+        });
+      }
+
+      return response.json();
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new AppError(504, "Evolution API request timed out");
+      }
+
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 }
