@@ -1,0 +1,45 @@
+{
+  "name": "wpp-sales-bot-backend",
+  "version": "0.1.0",
+  "description": "Backend modular para bot de WhatsApp focado em atendimento, qualificacao de leads e vendas automatizadas.",
+  "private": true,
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "prisma:generate": "prisma generate --schema src/database/prisma/schema.prisma",
+    "prisma:migrate:dev": "prisma migrate dev --schema src/database/prisma/schema.prisma",
+    "prisma:push": "prisma db push --schema src/database/prisma/schema.prisma",
+    "lint": "tsc --noEmit",
+    "test:webhook": "tsx scripts/simulate-webhook.ts"
+  },
+  "keywords": [
+    "whatsapp",
+    "bot",
+    "typescript",
+    "express",
+    "prisma",
+    "postgresql"
+  ],
+  "author": "Codex",
+  "license": "MIT",
+  "dependencies": {
+    "@prisma/client": "^6.7.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "helmet": "^8.1.0",
+    "morgan": "^1.10.0",
+    "zod": "^3.24.4"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.1",
+    "@types/morgan": "^1.9.9",
+    "@types/node": "^22.15.3",
+    "prisma": "^6.7.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3"
+  }
+}
